@@ -1,5 +1,5 @@
 [tool.poetry]
-name = "ccliz-pipeline"
+name = "ccliz_pipeline"
 version = "0.1.0"
 description = "wip - pipeline for processing commoncrawl dumps"
 authors = ["Liz Goodwin <work@lizgood.win>"]
