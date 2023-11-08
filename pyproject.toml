@@ -7,8 +7,17 @@ license = "MIT"
 readme = "README.md"
 
 [tool.poetry.dependencies]
-python = "^3.11"
+python = " >=3.11,<3.12"
+msgspec = "^0.18.4"
+minlizhash = "^0.2.1"
+warcio = "^1.7.4"
+fastwarc = "^0.14.5"
+resiliparse = "^0.14.5"
+trafilatura = "^1.6.2"
 
+
+[tool.poetry.group.dev.dependencies]
+ipykernel = "^6.26.0"
 
 [build-system]
 requires = ["poetry-core"]
