@@ -19,7 +19,7 @@ class WARCHeader(Struct):
 class TextDocument(Struct):
     id: str  # "CC/YYYY-mm/[0000-9999]/[integer]"
     header: WARCHeader
-    raw_content: bytes
+    raw_text: str  # "raw" text (only minimal processing)
     pipeline_status: str  # "raw",
 
 
