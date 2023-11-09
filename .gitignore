@@ -8,3 +8,9 @@ env/*
 *.ipynb
 
 commoncrawl/*
+
+
+*.json
+*.json.gz
+*.jsonl
+*.jsonl.gz

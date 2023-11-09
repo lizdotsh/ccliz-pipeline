@@ -589,6 +589,45 @@ test = ["pickleshare", "pytest (<7.1)", "pytest-asyncio (<0.22)", "testpath"]
 test-extra = ["curio", "matplotlib (!=3.2.0)", "nbformat", "numpy (>=1.22)", "pandas", "pickleshare", "pytest (<7.1)", "pytest-asyncio (<0.22)", "testpath", "trio"]
 
 [[package]]
+name = "isal"
+version = "1.5.2"
+description = "Faster zlib and gzip compatible compression and decompression by providing python bindings for the ISA-L library."
+optional = false
+python-versions = ">=3.8"
+files = [
+    {file = "isal-1.5.2-cp310-cp310-macosx_10_9_x86_64.whl", hash = "sha256:da830479c1c99732b4275a5b0849e238ad8f80eb6a2a531fae9d5f2359f3871a"},
+    {file = "isal-1.5.2-cp310-cp310-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:58dcf78f2c97a99ba86a9ae0734d41b2e6181788ae8e08f66a2454e734e11261"},
+    {file = "isal-1.5.2-cp310-cp310-musllinux_1_1_x86_64.whl", hash = "sha256:66f694eb17ee3e2586fe8ea16c3f4f192143db71713741263401f6667acec632"},
+    {file = "isal-1.5.2-cp310-cp310-win_amd64.whl", hash = "sha256:60021d7d6f04af821e7756cde2b1240d170a51aaccf9cc1fe2bd729912271f31"},
+    {file = "isal-1.5.2-cp311-cp311-macosx_10_9_x86_64.whl", hash = "sha256:8ebdddc52657b24f1248c22623158532c0d0c97aafec80c7200ef138ce6dc076"},
+    {file = "isal-1.5.2-cp311-cp311-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:d2526129e71a2fe4c33f5a7662f43af032b3e6db3e4420e9e0c3ca5da43a222c"},
+    {file = "isal-1.5.2-cp311-cp311-musllinux_1_1_x86_64.whl", hash = "sha256:99973994f74c6eaa60917d6e15eb2d63173d5075ac842159b5d930111f799f6d"},
+    {file = "isal-1.5.2-cp311-cp311-win_amd64.whl", hash = "sha256:4cc81c83c2d890a7b98c03e2629ceab64b41abe7ffda4f91f1c455e6accffc44"},
+    {file = "isal-1.5.2-cp312-cp312-macosx_10_9_x86_64.whl", hash = "sha256:1e10262cbc35f3878893a1dbba38bb8c6ea84c2d90a8590fa541a3b60124eaaf"},
+    {file = "isal-1.5.2-cp312-cp312-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:dc80b4b2548b3e5d6d7e5e463e49faac460ef909809ef5b09d2d58d4bead6b44"},
+    {file = "isal-1.5.2-cp312-cp312-musllinux_1_1_x86_64.whl", hash = "sha256:9a6cc9d9a7585ad7d0f665c8f4ab86ed8514f55d9249027dcdf214ddf323d853"},
+    {file = "isal-1.5.2-cp312-cp312-win_amd64.whl", hash = "sha256:ddf07f3163987ff371fc3fbb85bdb8c663c3507a33ae7785c85644b83d03d68d"},
+    {file = "isal-1.5.2-cp38-cp38-macosx_10_9_x86_64.whl", hash = "sha256:234b6ac5a28727be7de0bc7be7b952197f50d86aba0613c3d2201b8c3691a7b7"},
+    {file = "isal-1.5.2-cp38-cp38-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:de32aea5ff26bf99c5b6395108591b4d7c88c2b9a2bb9cab40b94c929c958416"},
+    {file = "isal-1.5.2-cp38-cp38-musllinux_1_1_x86_64.whl", hash = "sha256:8186c3169f76968aa937550d5748486f5713d4cdcdd0aae73fdc79d11fda59dc"},
+    {file = "isal-1.5.2-cp38-cp38-win_amd64.whl", hash = "sha256:c4a2948615659acf6d4d6ae9898f7db37d5f03f23404503fb5281ed096c7bfec"},
+    {file = "isal-1.5.2-cp39-cp39-macosx_10_9_x86_64.whl", hash = "sha256:26851fa1fc6c58a2ef54015185b9e715f48e3986b7f41fe413d134771dbbeca7"},
+    {file = "isal-1.5.2-cp39-cp39-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:40882510d0d4f118c55471b912a74569eff66648f86e0776a0ddeb467a3f23e6"},
+    {file = "isal-1.5.2-cp39-cp39-musllinux_1_1_x86_64.whl", hash = "sha256:fcf8c8c04bd8d48f8add28ea7a6f53410a7ba9a2ebb5df608022afb904ccc822"},
+    {file = "isal-1.5.2-cp39-cp39-win_amd64.whl", hash = "sha256:84fd016b44f8c615f9904bd1da44aa41a060d7566ea0a2abfa7b6fe24e5679b8"},
+    {file = "isal-1.5.2-pp310-pypy310_pp73-macosx_10_9_x86_64.whl", hash = "sha256:186d04706cb14a764c4f3a021de7c0820828dea736abc39665b335878025d3d1"},
+    {file = "isal-1.5.2-pp310-pypy310_pp73-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:3c3b25f2638e4e03ce730001a5bb05c99ab5a26e6f108f699877e2b695566a25"},
+    {file = "isal-1.5.2-pp310-pypy310_pp73-win_amd64.whl", hash = "sha256:3f6648fcb45d9f8d077e8225e1bad89c6a5e2398d9c9b082967ef53796300df5"},
+    {file = "isal-1.5.2-pp38-pypy38_pp73-macosx_10_9_x86_64.whl", hash = "sha256:edd9500ae0dbae3fac28a8f499bd565f289afd4fbd7f75a49b552b19b2f37e5d"},
+    {file = "isal-1.5.2-pp38-pypy38_pp73-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:67a8426e3fdda993459393664cb20bd5fdf2f28f27d2763911329018bdf2b9eb"},
+    {file = "isal-1.5.2-pp38-pypy38_pp73-win_amd64.whl", hash = "sha256:01c0fe4ba02b31e10a024acd7c26d8680fb0c91daf68e86e117720ebf9f4ffa6"},
+    {file = "isal-1.5.2-pp39-pypy39_pp73-macosx_10_9_x86_64.whl", hash = "sha256:bc77e525deabda3e986fa85b48496fbd7583957ac998481677796745c39bc54a"},
+    {file = "isal-1.5.2-pp39-pypy39_pp73-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:51c773d30bbcb9216e9f3cd5aa4ffd8bc6b4d57b3cc772b8e4f8d02f4e709c7f"},
+    {file = "isal-1.5.2-pp39-pypy39_pp73-win_amd64.whl", hash = "sha256:9f85e99a99bd4dd0be39e92fc38b284a56af30175d12186958c92e3b7f824092"},
+    {file = "isal-1.5.2.tar.gz", hash = "sha256:38f4e04b9f5a9577a7b16362a4d38b413e6978852d0c94c2cd7a3964e4794f28"},
+]
+
+[[package]]
 name = "jedi"
 version = "0.19.1"
 description = "An autocompletion tool for Python that can be used for text editors."
@@ -1817,6 +1856,24 @@ files = [
 ]
 
 [[package]]
+name = "xopen"
+version = "1.8.0"
+description = "Open compressed files transparently"
+optional = false
+python-versions = ">=3.8"
+files = [
+    {file = "xopen-1.8.0-py3-none-any.whl", hash = "sha256:e151a23bcaa0913e9683654c197d1da2444d4e59f27aa17e93bbf42eb4a72d7d"},
+    {file = "xopen-1.8.0.tar.gz", hash = "sha256:00c0fc8945311b1c37e0f845a596d37f26a3d9820aaeb52cffd4f25fdae50840"},
+]
+
+[package.dependencies]
+isal = {version = ">=1.4.1", markers = "platform_machine == \"x86_64\" or platform_machine == \"AMD64\" or platform_machine == \"aarch64\""}
+
+[package.extras]
+dev = ["pytest"]
+zstd = ["zstandard (<1)"]
+
+[[package]]
 name = "xxhash"
 version = "3.4.1"
 description = "Python binding for xxHash"
@@ -1936,4 +1993,4 @@ files = [
 [metadata]
 lock-version = "2.0"
 python-versions = " >=3.11,<3.12"
-content-hash = "19874cf49116f5b1f2a1d09da49caff516ecfd56e950b20338d4453a58759a47"
+content-hash = "ef46c1f7202f578289ed76022d3b70a438929db65d0cbd436064610ae3b44a5a"
