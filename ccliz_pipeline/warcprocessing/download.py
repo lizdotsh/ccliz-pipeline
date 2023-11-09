@@ -7,7 +7,7 @@ from fastwarc.warc import ArchiveIterator, WarcRecordType
 from resiliparse.parse.encoding import bytes_to_str
 from tqdm import tqdm
 
-from .preprocessing import preprocess_raw_bytes
+from .preprocessing import preprocess_raw_bytes, preprocessing_rules
 from .types import TextDocument, WARCHeader
 from .utils import make_warc_header
 
@@ -26,11 +26,13 @@ def warc_record_handler(
     record: WarcRecordType, id: int, snapshot_date: str, segment: str
 ):
     header = make_warc_header(record.headers)
-
+    body = preprocess_raw_bytes(record.reader.read())
+    if not preprocessing_rules(body):
+        return ""
     return TextDocument(
         id=f"CC/{snapshot_date}/{segment}/{id}",
         header=header,
-        raw_text=preprocess_raw_bytes(record.reader.read()),
+        raw_text=body,
         pipeline_status="raw",
     )
 
@@ -64,6 +66,9 @@ def handle_archive_stream(stream, filehandler: BinaryIO):
         )
     ):
         # filehandler.write(
+        # doc = warc_record_handler(record, id, CC_SNAPSHOT, CC_SEGMENT)
+        # if doc is None:
+        #     continue
         encoder.encode_into(
             warc_record_handler(record, id, CC_SNAPSHOT, CC_SEGMENT), buffer
         )
