@@ -31,29 +31,38 @@ def preprocessing_rules(s: str) -> bool:
     if not s:
         return False
     num_words = len(s.split())
-    if num_words < 50 or num_words > 100000:
+    if num_words < 20 or num_words > 100000:
+        # why
+        # print("num words not in range")
         return False
     if len(s) / num_words < 3 or len(s) / num_words > 10:
+        # print("mean word length not in range")
         return False
     if s.count("#") / num_words > 0.1:
+        # print("too many hashtags")
         return False
     if s.count("...") / num_words > 0.1:
+        # print("too many ellipses")
         return False
     if s.count("•") / num_words > 0.9:
+        # print("too many bullet points")
         return False
     if s.count("...") / num_words > 0.3:
+        # print("too many ellipses")
         return False
     if sum([1 for w in s.split() if not w.isalpha()]) / len(s.split()) > 0.8:
+        # print("too many non-alphabetic characters")
         return False
-    if (
-        sum(
-            [
-                1
-                for w in s.split()
-                if w in ["the", "be", "to", "of", "and", "that", "have", "with"]
-            ]
-        )
-        < 2
-    ):
-        return False
+    # if (
+    #     sum(
+    #         [
+    #             1
+    #             for w in s.split()
+    #             if w in ["the", "be", "to", "of", "and", "that", "have", "with"]
+    #         ]
+    #     )
+    #     < 2
+    # ):
+    #     print("not enough stop words")
+    #     return False
     return True

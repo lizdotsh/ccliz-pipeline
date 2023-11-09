@@ -1,14 +1,14 @@
+import multiprocessing as mp
 from os import makedirs, path
 from typing import BinaryIO
 
 import msgspec
 from fastwarc.stream_io import FileStream, GZipStream
 from fastwarc.warc import ArchiveIterator, WarcRecordType
-from resiliparse.parse.encoding import bytes_to_str
 from tqdm import tqdm
 
 from .preprocessing import preprocess_raw_bytes, preprocessing_rules
-from .types import TextDocument, WARCHeader
+from .types import TextDocument
 from .utils import make_warc_header
 
 encoder = msgspec.json.Encoder()
@@ -28,7 +28,9 @@ def warc_record_handler(
     header = make_warc_header(record.headers)
     body = preprocess_raw_bytes(record.reader.read())
     if not preprocessing_rules(body):
-        return ""
+        # if id % 25 == 0:
+        #    print("failed preprocessing rules", body)
+        return None
     return TextDocument(
         id=f"CC/{snapshot_date}/{segment}/{id}",
         header=header,
@@ -54,33 +56,45 @@ def handle_archive_stream(stream, filehandler: BinaryIO):
     # ret = []
     buffer = bytearray(2000000)
     buffer.clear()
+    count_all = 0
+    count_passed = 0
     for id, record in tqdm(
         enumerate(
             ArchiveIterator(
                 stream,
-                parse_http=True,
+                parse_http=False,
                 record_types=WarcRecordType.response,
-                #  func_filter=lambda r: r.headers.get("WARC-Identified-Payload-Type")
-                #  == "text/html",
             )
         )
     ):
-        # filehandler.write(
-        # doc = warc_record_handler(record, id, CC_SNAPSHOT, CC_SEGMENT)
-        # if doc is None:
-        #     continue
-        encoder.encode_into(
-            warc_record_handler(record, id, CC_SNAPSHOT, CC_SEGMENT), buffer
-        )
+        # if id % 10 == 0:
+        #    print(id, count_all, count_passed)
+        rec = warc_record_handler(record, id, CC_SNAPSHOT, CC_SEGMENT)
+        count_all += 1
+
+        if not rec:
+            continue
+        encoder.encode_into(rec, buffer, -1)
         buffer.extend(b"\n")
-        filehandler.write(buffer)
-        buffer.clear()
+        if len(buffer) > 1500000:
+            print("writing buffer", len(buffer))
+            count_passed += 1
+
+            filehandler.write(buffer)
+            buffer.clear()
 
 
-def managed_stream(output_file: str, path_to_cc_file: str, overwrite: bool = True):
+def managed_stream(
+    output_file: str,
+    path_to_cc_file: str,
+    overwrite: bool = True,
+    snapshot: str = CC_SNAPSHOT,
+    segment: str = CC_SEGMENT,
+):
     # write line by line to output_file
     # mkdir if not exists
-    output_path = path.join("CC", CC_SNAPSHOT, CC_SEGMENT)
+    print(f"Writing to {output_file} with snapshot {snapshot} and segment {segment}\n")
+    output_path = path.join("CC", snapshot, segment)
     if not path.exists(output_path):
         makedirs(output_path)
     # if overwrite, delete file else error
@@ -93,4 +107,28 @@ def managed_stream(output_file: str, path_to_cc_file: str, overwrite: bool = Tru
         stream_from_cc_file(path_to_cc_file, lambda st: handle_archive_stream(st, file))
 
 
-# def processResponse(record: WarcRecordType.response)
+def batch_managed_streams(
+    output_file: str,
+    cc_files: list[str],
+    cc_segments_per_file: list[str],
+    cc_snapshot: str = CC_SNAPSHOT,
+    overwrite: bool = True,
+):
+    # dispatch managed_stream for each segment
+
+    with mp.Pool(
+        processes=mp.cpu_count() - 2,
+    ) as pool:
+        pool.starmap(
+            managed_stream,
+            [
+                (
+                    output_file,
+                    cc_file,
+                    overwrite,
+                    cc_snapshot,
+                    cc_segment,
+                )
+                for cc_file, cc_segment in zip(cc_files, cc_segments_per_file)
+            ],
+        )
