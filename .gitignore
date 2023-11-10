@@ -17,3 +17,5 @@ commoncrawl/*
 *.json.zip
 *.jsonl.zip
 CC/*
+*.json.zip
+*.jsonl.zip
