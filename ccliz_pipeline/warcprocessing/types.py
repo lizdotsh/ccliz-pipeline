@@ -1,3 +1,4 @@
+from typing import Protocol, TypedDict
 from uuid import UUID
 
 from msgspec import Struct
@@ -21,6 +22,30 @@ class TextDocument(Struct):
     header: WARCHeader
     raw_text: str  # "raw" text (only minimal processing)
     pipeline_status: str  # "raw",
+
+
+class CCRecord(TypedDict):
+    snapshot: str
+    segment: str
+    file_num: str
+    raw: str
+    record_id_prefix: str
+
+
+class ArchiveHandler(Protocol):
+    def get(snapshot: str, segment: str):
+        ...
+
+    def __call__(self, stream, filehandler, snapshot_date, segment):
+        ...
+
+
+class ArchiveIO(Protocol):
+    def get(snapshot: str, segment: str):
+        ...
+
+    def __call__(self, snapshot: str, segment: str):
+        ...
 
 
 # status_info:
