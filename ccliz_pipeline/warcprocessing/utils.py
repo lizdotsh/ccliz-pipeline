@@ -1,13 +1,13 @@
 import re
 import unicodedata
 from os import makedirs, path, remove
-from typing import Literal, Match
+from typing import Literal
 from uuid import UUID
 
 import trafilatura as tf
 from fastwarc.warc import WarcHeaderMap
 
-from .types import CCRecord, CCRecordStage, TextDocument, WARCHeader
+from .types import CCRecord, CCRecordStage, CCRecordURL, TextDocument, WARCHeader
 
 
 def process_html(str: str):
@@ -71,9 +71,14 @@ process_segment_url_re = re.compile(
 
 def process_segment_url(
     url: str,
-) -> Match[str]:
+) -> CCRecordURL:
     match = process_segment_url_re.search(url)
     if not match:
         raise ValueError(f"Could not process {url}")
 
-    return match
+    return CCRecordURL(
+        snapshot=match.group(1),
+        segment=match.group(2),
+        file_num=match.group(3),
+        raw=url,
+    )
