@@ -1,134 +1,145 @@
-import multiprocessing as mp
-from os import makedirs, path
-from typing import BinaryIO
+import gzip
+import logging as log
+import os
+import re
+from os import path
+from shutil import copyfileobj
+from typing import Literal
 
-import msgspec
-from fastwarc.stream_io import FileStream, GZipStream
-from fastwarc.warc import ArchiveIterator, WarcRecordType
-from tqdm import tqdm
+import requests
+import tqdm
 
-from .preprocessing import preprocess_raw_bytes, preprocessing_rules
-from .types import TextDocument
-from .utils import make_warc_header
+from .pipeline import CCRecord
+from .types import ArchiveIO, CCRecordStage
+from .utils import check_and_makedirs, check_file
 
-encoder = msgspec.json.Encoder()
-
-CC_SNAPSHOT = "2023-09"
-CC_SEGMENT = "00000"
-
-
-def stream_from_cc_file(path_to_cc_file: str, streamHandler):
-    with GZipStream(FileStream(path_to_cc_file)) as stream:
-        return streamHandler(stream)
+process_segment_url_re = re.compile(
+    r"crawl-data\/CC-MAIN-(\d{4}-\d{2})\/segments\/(\d+\.\d+)\/warc\/CC-MAIN-\d{14}-\d{14}-(\d{5})\.warc\.gz"
+)
 
 
-def warc_record_handler(
-    record: WarcRecordType, id: int, snapshot_date: str, segment: str
-):
-    header = make_warc_header(record.headers)
-    body = preprocess_raw_bytes(record.reader.read())
-    if not preprocessing_rules(body):
-        # if id % 25 == 0:
-        #    print("failed preprocessing rules", body)
-        return None
-    return TextDocument(
-        id=f"CC/{snapshot_date}/{segment}/{id}",
-        header=header,
-        raw_text=body,
-        pipeline_status="raw",
+def process_segment_url(url: str) -> CCRecord:
+    match = process_segment_url_re.search(url)
+    if not match:
+        raise ValueError(f"Could not process {url}")
+
+    return CCRecord(
+        snapshot=match.group(1),
+        segment=match.group(2),
+        file_num=match.group(3),
+        raw=url,
+        record_id_prefix=f"{match.group(1)}/{match.group(2)}/{match.group(3)}",
     )
 
 
-def oldfashioned_handle_archive_stream(stream):
-    ret = []
-    for id, record in enumerate(
-        ArchiveIterator(
-            stream,
-            parse_http=True,
-            record_types=WarcRecordType.response,
-        )
+class HTTPArchiveIO(ArchiveIO):
+    def __init__(
+        self,
+        # record: CCRecord,
+        CC_local_path: str = "CC/",
+        CC_remote_path: str = "https://data.commoncrawl.org/",
     ):
-        ret.append(warc_record_handler(record, id, CC_SNAPSHOT, CC_SEGMENT))
-    return ret
+        # self.record = record
+        self.CC_local_path = CC_local_path
+        self.CC_remote_path = CC_remote_path
+
+    def _format_url(self, record: CCRecord) -> str:
+        return path.join(self.CC_remote_path, record["raw"])
+
+    def download(self, record: CCRecord):
+        # Download the file to the local path
+        req = requests.get(record["raw"], allow_redirects=True)
 
 
-def handle_archive_stream(stream, filehandler: BinaryIO):
-    # ret = []
-    buffer = bytearray(2000000)
-    buffer.clear()
-    count_all = 0
-    count_passed = 0
-    for id, record in tqdm(
-        enumerate(
-            ArchiveIterator(
-                stream,
-                parse_http=False,
-                record_types=WarcRecordType.response,
-            )
-        )
+class LocalArchiveIO(ArchiveIO):
+    """
+    This is really messy honestly. need to fix asap
+    """
+
+    def __init__(
+        self,
+        # record: CCRecord,
+        CC_local_path: str = "CC/local/",
+        CC_staging_path: str = "CC/staging/",
+        CC_source_path: str = "CC/source/",
     ):
-        # if id % 10 == 0:
-        #    print(id, count_all, count_passed)
-        rec = warc_record_handler(record, id, CC_SNAPSHOT, CC_SEGMENT)
-        count_all += 1
+        os.makedirs(CC_local_path, exist_ok=True)
+        os.makedirs(CC_staging_path, exist_ok=True)
+        # os.makedirs(CC_source_path, exist_ok=True)
 
-        if not rec:
-            continue
-        encoder.encode_into(rec, buffer, -1)
-        buffer.extend(b"\n")
-        if len(buffer) > 1500000:
-            print("writing buffer", len(buffer))
-            count_passed += 1
+        if not path.exists(CC_local_path):
+            raise ValueError(f"CC_local_path {CC_local_path} does not exist")
+        if not path.exists(CC_source_path):
+            raise ValueError(f"CC_source_path {CC_source_path} does not exist")
+        if not path.exists(CC_staging_path):
+            raise ValueError(f"CC_staging_path {CC_staging_path} does not exist")
+        # self.record = record
+        self._local = CC_local_path
+        self._staging = CC_staging_path
+        self._source = CC_source_path
 
-            filehandler.write(buffer)
-            buffer.clear()
+    # def _format_url(self, record: CCRecord) -> str:
+    #     return path.join(self.CC_remote_path, record["raw"])
+    def stage(self, record: CCRecord, delete=False, overwrite=False):
+        # Copy file in CCRecord.url to staging
 
-
-def managed_stream(
-    output_file: str,
-    path_to_cc_file: str,
-    overwrite: bool = True,
-    snapshot: str = CC_SNAPSHOT,
-    segment: str = CC_SEGMENT,
-):
-    # write line by line to output_file
-    # mkdir if not exists
-    print(f"Writing to {output_file} with snapshot {snapshot} and segment {segment}\n")
-    output_path = path.join("CC", snapshot, segment)
-    if not path.exists(output_path):
-        makedirs(output_path)
-    # if overwrite, delete file else error
-    if path.exists(path.join(output_path, output_file)):
-        if overwrite:
-            print(f"Overwriting {output_file}")
-        else:
-            raise FileExistsError(f"{output_file} exists")
-    with open(path.join(output_path, output_file), "wb") as file:
-        stream_from_cc_file(path_to_cc_file, lambda st: handle_archive_stream(st, file))
-
-
-def batch_managed_streams(
-    output_file: str,
-    cc_files: list[str],
-    cc_segments_per_file: list[str],
-    cc_snapshot: str = CC_SNAPSHOT,
-    overwrite: bool = True,
-):
-    # dispatch managed_stream for each segment
-
-    with mp.Pool(
-        processes=mp.cpu_count() - 2,
-    ) as pool:
-        pool.starmap(
-            managed_stream,
-            [
-                (
-                    output_file,
-                    cc_file,
-                    overwrite,
-                    cc_snapshot,
-                    cc_segment,
-                )
-                for cc_file, cc_segment in zip(cc_files, cc_segments_per_file)
-            ],
+        splits = (record["record_id_prefix"] + ".warc.gz").split(os.path.sep)
+        if not path.isfile(path.join(self._source, *splits)):
+            raise ValueError(f"File {path.join(self._source, *splits)} does not exist")
+        os.makedirs(path.join(self._staging, *splits[:-1]), exist_ok=True)
+        self._copy_file_gzip(
+            path.join(self._source, *splits),
+            path.join(self._staging, *splits),
+            delete=delete,
+            overwrite=overwrite,
         )
+        return path.join(self._staging, *splits)
+
+    @staticmethod
+    def _copy_file_gzip(source, dest, delete: bool = False, overwrite: bool = False):
+        if path.exists(dest):
+            if overwrite:
+                os.remove(dest)
+            else:
+                raise ValueError(f"File {dest} already exists")
+        with gzip.open(source, "rb") as f_in:
+            with open(dest, "wb") as f_out:
+                copyfileobj(f_in, f_out)
+        if delete:
+            os.remove(source)
+
+
+def _copy_file_gzip(
+    source, dest, delete: bool = False, overwrite: Literal["always", "never"] = "never"
+):
+    source = check_file(source, overwrite)
+    dest = check_and_makedirs(dest)
+    with gzip.open(source, "rb") as f_in:
+        with open(dest, "wb") as f_out:
+            copyfileobj(f_in, f_out)
+    if delete:
+        os.remove(source)
+    return dest
+
+
+def stage_record(
+    record: CCRecord, overwrite: Literal["always", "never"] = "never", delete=False
+):
+    if record.stage != CCRecordStage.SOURCE:
+        raise ValueError(
+            f"Record {record.record_id} is not ready to be staged/isn't sourced"
+        )
+    try:
+        log.info(f"Staging record {record.record_id}")
+        source_path = record.get_path(record, CCRecordStage.SOURCE)
+        staged_path = record.get_path(record, CCRecordStage.STAGED)
+        dest = _copy_file_gzip(
+            source_path, staged_path, delete=delete, overwrite=overwrite
+        )
+    except Exception as e:
+        log.error(f"Error staging record {record.record_id}")
+        record.update_stage(CCRecordStage.ERROR)
+        raise e
+    else:
+        record.update_stage(CCRecordStage.STAGED)
+        return dest

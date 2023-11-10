@@ -1,5 +1,21 @@
+import re
+
 import trafilatura as tf
 from resiliparse.parse.encoding import bytes_to_str
+
+hashtag_line_re = re.compile(r".*#\s*$", re.MULTILINE)
+
+
+# matches = hashtag_line_re.findall(text)
+def count_hashtag_lines(text):
+    # Compile a regular expression to find lines ending with a hashtag
+    hashtag_line_re = re.compile(r".*#\s*$", re.MULTILINE)
+
+    # Use finditer to avoid storing all matches at once
+    matches = hashtag_line_re.finditer(text)
+
+    # Return the number of matching lines by summing over the iterator
+    return sum(1 for _ in matches)
 
 
 def preprocess_raw_bytes(body: bytes) -> str:
