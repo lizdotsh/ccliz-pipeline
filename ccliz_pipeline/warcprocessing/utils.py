@@ -1,7 +1,7 @@
 import re
 import unicodedata
 from os import makedirs, path, remove
-from typing import Literal
+from typing import Literal, Match
 from uuid import UUID
 
 import trafilatura as tf
@@ -62,3 +62,18 @@ def check_and_makedirs(path_with_extension: str) -> str:
     if not path.exists(path.dirname(file_path)):
         makedirs(path.dirname(file_path))
     return file_path
+
+
+process_segment_url_re = re.compile(
+    r"crawl-data\/CC-MAIN-(\d{4}-\d{2})\/segments\/(\d+\.\d+)\/warc\/CC-MAIN-\d{14}-\d{14}-(\d{5f})\.warc\.gz"
+)
+
+
+def process_segment_url(
+    url: str,
+) -> Match[str]:
+    match = process_segment_url_re.search(url)
+    if not match:
+        raise ValueError(f"Could not process {url}")
+
+    return match

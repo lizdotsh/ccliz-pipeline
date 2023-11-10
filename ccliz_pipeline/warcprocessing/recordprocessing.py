@@ -24,8 +24,7 @@ def stream_from_cc_file(path_to_cc_file: str, streamHandler):
         return streamHandler(stream)
 
 
-def warc_record_handler(
-    document: WarcRecordType, id: int, record: CCRecord) 
+def warc_record_handler(document: WarcRecordType, id: int, record: CCRecord):
     header = make_warc_header(document.headers)
     body = preprocess_raw_bytes(document.reader.read())
     if not preprocessing_rules(body):
@@ -144,16 +143,19 @@ def process_record(
         )
         with open(processed_file_path, "wb") as file:
             stream_from_cc_file(
-                record.get_path(CCRecordStage.STAGED),
+                source_file_path,
                 partial(
                     handle_archive_stream,
                     filehandler=file,
-                    snapshot_date=record.snapshot,
-                    segment=record.segment,
+                    record=record,
                 ),
             )
         # print("stage", record.stage)
     except Exception as e:
         log.error(f"Error processing record {record.record_id}: {e}")
         record.update_stage(CCRecordStage.ERROR)
+        return record
+    else:
+        log.info(f"Finished processing record {record.record_id}")
+        record.update_stage(CCRecordStage.PREPROCESSED)
         return record

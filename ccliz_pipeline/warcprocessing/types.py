@@ -7,6 +7,8 @@ from uuid import UUID
 
 from msgspec import Struct
 
+from .utils import process_segment_url
+
 
 class WARCHeader(Struct):
     warc_record_id: UUID
@@ -52,7 +54,7 @@ class ArchiveIO(Protocol):
 
 class LocalConfig(TypedDict):
     cc_path: str
-    Downloader: ArchiveIO
+    Downloader: Optional[ArchiveIO]
 
 
 @dataclass
@@ -67,6 +69,24 @@ class CCRecord:
     stage_history: list[CCRecordStage] = []
 
     # pipeline: CCPipeline = None
+    @staticmethod
+    def create_from_URL(
+        url: str,
+        config: LocalConfig = LocalConfig(cc_path="CC/", Downloader=None),
+        stage: Optional[CCRecordStage] = CCRecordStage.VOID,
+    ) -> "CCRecord":
+        """Creates a CCRecord from a URL"""
+        matches = process_segment_url(url)
+        return CCRecord(
+            snapshot=matches.group(1),
+            segment=matches.group(2),
+            file_num=matches.group(3),
+            raw=url,
+            record_id=f"{matches.group(1)}/{matches.group(2)}/{matches.group(3)}",
+            stage=stage,
+            config=config,
+            stage_history=[],
+        )
 
     @staticmethod
     def _rem_ext(path_str: str | None) -> str | None:

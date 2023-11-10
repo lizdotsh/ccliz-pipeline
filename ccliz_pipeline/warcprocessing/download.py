@@ -9,24 +9,6 @@ import tqdm
 
 from .types import ArchiveIO, CCRecord
 
-process_segment_url_re = re.compile(
-    r"crawl-data\/CC-MAIN-(\d{4}-\d{2})\/segments\/(\d+\.\d+)\/warc\/CC-MAIN-\d{14}-\d{14}-(\d{5})\.warc\.gz"
-)
-
-
-def process_segment_url(url: str) -> CCRecord:
-    match = process_segment_url_re.search(url)
-    if not match:
-        raise ValueError(f"Could not process {url}")
-
-    return CCRecord(
-        snapshot=match.group(1),
-        segment=match.group(2),
-        file_num=match.group(3),
-        raw=url,
-        record_id_prefix=f"{match.group(1)}/{match.group(2)}/{match.group(3)}",
-    )
-
 
 def create_local_dirs(
     record: CCRecord,
