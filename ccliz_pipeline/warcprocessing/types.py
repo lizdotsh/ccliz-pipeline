@@ -2,7 +2,7 @@ from collections import deque
 from dataclasses import dataclass
 from enum import Enum, auto
 from os import path
-from typing import Deque, Protocol, TypedDict
+from typing import Deque, Optional, Protocol, TypedDict
 from uuid import UUID
 
 from msgspec import Struct
@@ -76,7 +76,7 @@ class CCRecord:
         splits = path_str.split(path.sep)
         return path.join(*splits[:-1])
 
-    def get_path(self, stage: CCRecordStage | None = None) -> str | None:
+    def get_path(self, stage: Optional[CCRecordStage]) -> str:
         if not stage:
             stage = self.stage
         # match by stage
@@ -88,24 +88,30 @@ class CCRecord:
             case CCRecordStage.VOID:
                 return ""
             case CCRecordStage.SOURCE:
-                return path.join(self.parent_dir, "source", self.record_id + ".warc.gz")
+                return path.join(
+                    self.config["cc_path"], "source", self.record_id + ".warc.gz"
+                )
             case CCRecordStage.STAGED | CCRecordStage.PREPROCESSING:
-                return path.join(self.parent_dir, "staging", self.record_id + ".warc")
+                return path.join(
+                    self.config["cc_path"], "staging", self.record_id + ".warc"
+                )
             case CCRecordStage.PREPROCESSED | CCRecordStage.FILTERING:
                 return path.join(
-                    self.parent_dir, "local/prepared", self.record_id + ".jsonl"
+                    self.config["cc_path"], "local/prepared", self.record_id + ".jsonl"
                 )
             case CCRecordStage.FILTERED | CCRecordStage.DEDUPLICATING:
                 return path.join(
-                    self.parent_dir, "local/filtered", self.record_id + ".jsonl"
+                    self.config["cc_path"], "local/filtered", self.record_id + ".jsonl"
                 )
             case CCRecordStage.DEDUPLICATED:
                 return path.join(
-                    self.parent_dir, "local/deduplicated", self.record_id + ".jsonl"
+                    self.config["cc_path"],
+                    "local/deduplicated",
+                    self.record_id + ".jsonl",
                 )
             case CCRecordStage.FINAL:
                 return path.join(
-                    self.parent_dir, "local/final", self.record_id + ".jsonl"
+                    self.config["cc_path"], "local/final", self.record_id + ".jsonl"
                 )
             case CCRecordStage.ERROR:
                 return self._match_stage(self.stage_history[-1])
@@ -114,6 +120,10 @@ class CCRecord:
         if not stage:
             stage = self.stage
         return self._rem_ext(self._match_stage(stage))
+
+    def update_stage(self, stage: CCRecordStage):
+        self.stage_history.append(self.stage)
+        self.stage = stage
 
 
 class ArchiveHandler(Protocol):

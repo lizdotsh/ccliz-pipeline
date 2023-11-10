@@ -1,7 +1,8 @@
+import logging as log
 import multiprocessing as mp
 from functools import partial
 from os import makedirs, path
-from typing import BinaryIO
+from typing import BinaryIO, Literal
 
 import msgspec
 from fastwarc.stream_io import FileStream, GZipStream
@@ -9,8 +10,8 @@ from fastwarc.warc import ArchiveIterator, WarcRecordType
 from tqdm import tqdm
 
 from .preprocessing import preprocess_raw_bytes, preprocessing_rules
-from .types import TextDocument
-from .utils import make_warc_header
+from .types import CCRecord, CCRecordStage, TextDocument
+from .utils import check_and_makedirs, check_file, make_warc_header
 
 encoder = msgspec.json.Encoder()
 
@@ -24,31 +25,30 @@ def stream_from_cc_file(path_to_cc_file: str, streamHandler):
 
 
 def warc_record_handler(
-    record: WarcRecordType, id: int, snapshot_date: str, segment: str
-):
-    header = make_warc_header(record.headers)
-    body = preprocess_raw_bytes(record.reader.read())
+    document: WarcRecordType, id: int, record: CCRecord) 
+    header = make_warc_header(document.headers)
+    body = preprocess_raw_bytes(document.reader.read())
     if not preprocessing_rules(body):
         # if id % 25 == 0:
         #    print("failed preprocessing rules", body)
         return None
+    document_id = path.join(record.record_id, str(id))
+    log.info(f"Created document {document_id} ")
     return TextDocument(
-        id=f"CC/{snapshot_date}/{segment}/{id}",
+        id=document_id,
         header=header,
         raw_text=body,
         pipeline_status="raw",
     )
 
 
-def handle_archive_stream(
-    stream, filehandler: BinaryIO, snapshot_date: str, segment: str
-):
+def handle_archive_stream(stream, filehandler: BinaryIO, record: CCRecord):
     # ret = []
     buffer = bytearray(2000000)
     buffer.clear()
     count_all = 0
     count_passed = 0
-    for id, record in tqdm(
+    for id, document in tqdm(
         enumerate(
             ArchiveIterator(
                 stream,
@@ -57,12 +57,7 @@ def handle_archive_stream(
             )
         )
     ):
-        rec = warc_record_handler(
-            record,
-            id,
-            snapshot_date,
-            segment,
-        )
+        rec = warc_record_handler(document, id, record)
         count_all += 1
 
         if not rec:
@@ -70,7 +65,7 @@ def handle_archive_stream(
         encoder.encode_into(rec, buffer, -1)
         buffer.extend(b"\n")
         if len(buffer) > 1500000:
-            print("writing buffer", len(buffer))
+            log.info(f"{record.record_id} ({id}): writing buffer", len(buffer))
             count_passed += 1
 
             filehandler.write(buffer)
@@ -133,3 +128,32 @@ def batch_managed_streams(
                 for cc_file, cc_segment in zip(cc_files, cc_segments_per_file)
             ],
         )
+
+
+def process_record(
+    record: CCRecord, overwrite: Literal["always", "never", "rename"] = "rename"
+):
+    if record.stage != CCRecordStage.STAGED:
+        raise ValueError(f"Record {record.record_id} is not staged")
+    try:
+        record.update_stage(CCRecordStage.PREPROCESSING)
+        log.info(f"Processing record {record.record_id}")
+        source_file_path = check_file(record.get_path(CCRecordStage.STAGED), overwrite)
+        processed_file_path = check_and_makedirs(
+            record.get_path(CCRecordStage.PREPROCESSED)
+        )
+        with open(processed_file_path, "wb") as file:
+            stream_from_cc_file(
+                record.get_path(CCRecordStage.STAGED),
+                partial(
+                    handle_archive_stream,
+                    filehandler=file,
+                    snapshot_date=record.snapshot,
+                    segment=record.segment,
+                ),
+            )
+        # print("stage", record.stage)
+    except Exception as e:
+        log.error(f"Error processing record {record.record_id}: {e}")
+        record.update_stage(CCRecordStage.ERROR)
+        return record

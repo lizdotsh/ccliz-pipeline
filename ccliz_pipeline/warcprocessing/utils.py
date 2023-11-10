@@ -1,11 +1,13 @@
 import re
 import unicodedata
+from os import makedirs, path, remove
+from typing import Literal
 from uuid import UUID
 
 import trafilatura as tf
 from fastwarc.warc import WarcHeaderMap
 
-from .types import TextDocument, WARCHeader
+from .types import CCRecord, CCRecordStage, TextDocument, WARCHeader
 
 
 def process_html(str: str):
@@ -27,3 +29,36 @@ def make_warc_header(record: WarcHeaderMap) -> WARCHeader:
         identified_payload_type=rectuple[11][1],
         warc_type=rectuple[0][1],
     )
+
+
+def check_file(
+    filePath,
+    overwrite: Literal["always", "rename", "never"] = "rename",
+):
+    if not path.exists(filePath):
+        return filePath
+    match overwrite:
+        case "always":
+            remove(filePath)
+            return filePath
+        case "never":
+            raise FileExistsError(f"File {filePath} already exists")
+        case "rename":
+            return _rename_file(filePath)
+
+
+def _rename_file(filePath):
+    numb = 1
+    while True:
+        newPath = "{0}_{2}{1}".format(*path.splitext(filePath) + (numb,))
+        if path.exists(newPath):
+            numb += 1
+        else:
+            return newPath
+
+
+def check_and_makedirs(path_with_extension: str) -> str:
+    file_path = check_file(path_with_extension)
+    if not path.exists(path.dirname(file_path)):
+        makedirs(path.dirname(file_path))
+    return file_path
