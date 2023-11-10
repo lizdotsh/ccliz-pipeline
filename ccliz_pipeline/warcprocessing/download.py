@@ -62,6 +62,10 @@ class HTTPArchiveIO(ArchiveIO):
 
 
 class LocalArchiveIO(ArchiveIO):
+    """
+    This is really messy honestly. need to fix asap
+    """
+
     def __init__(
         self,
         # record: CCRecord,
@@ -102,7 +106,7 @@ class LocalArchiveIO(ArchiveIO):
         return path.join(self._staging, *splits)
 
     @staticmethod
-    def _copy_file_gzip(source, dest, delete=False, overwrite=False):
+    def _copy_file_gzip(source, dest, delete: bool = False, overwrite: bool = False):
         if path.exists(dest):
             if overwrite:
                 os.remove(dest)

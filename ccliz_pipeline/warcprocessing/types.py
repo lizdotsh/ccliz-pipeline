@@ -1,4 +1,8 @@
-from typing import Protocol, TypedDict
+from collections import deque
+from dataclasses import dataclass
+from enum import Enum, auto
+from os import path
+from typing import Deque, Protocol, TypedDict
 from uuid import UUID
 
 from msgspec import Struct
@@ -24,20 +28,18 @@ class TextDocument(Struct):
     pipeline_status: str  # "raw",
 
 
-class CCRecord(TypedDict):
-    snapshot: str
-    segment: str
-    file_num: str
-    raw: str
-    record_id_prefix: str
-
-
-class ArchiveHandler(Protocol):
-    def get(snapshot: str, segment: str):
-        ...
-
-    def __call__(self, stream, filehandler, snapshot_date, segment):
-        ...
+class CCRecordStage(Enum):
+    VOID = auto()
+    SOURCE = auto()  # only if local file
+    STAGED = auto()
+    PREPROCESSING = auto()
+    PREPROCESSED = auto()
+    FILTERING = auto()
+    FILTERED = auto()
+    DEDUPLICATING = auto()
+    DEDUPLICATED = auto()
+    FINAL = auto()
+    ERROR = auto()
 
 
 class ArchiveIO(Protocol):
@@ -45,6 +47,80 @@ class ArchiveIO(Protocol):
         ...
 
     def __call__(self, snapshot: str, segment: str):
+        ...
+
+
+class LocalConfig(TypedDict):
+    cc_path: str
+    Downloader: ArchiveIO
+
+
+@dataclass
+class CCRecord:
+    snapshot: str
+    segment: str
+    file_num: str
+    raw: str
+    record_id: str
+    stage: CCRecordStage
+    config: LocalConfig
+    stage_history: list[CCRecordStage] = []
+
+    # pipeline: CCPipeline = None
+
+    @staticmethod
+    def _rem_ext(path_str: str | None) -> str | None:
+        """Removes last extension from path"""
+        if not path_str:
+            return path_str
+        splits = path_str.split(path.sep)
+        return path.join(*splits[:-1])
+
+    def get_path(self, stage: CCRecordStage | None = None) -> str | None:
+        if not stage:
+            stage = self.stage
+        # match by stage
+        file_path = self._match_stage(stage)
+        return file_path
+
+    def _match_stage(self, stage: CCRecordStage) -> str:
+        match stage:
+            case CCRecordStage.VOID:
+                return ""
+            case CCRecordStage.SOURCE:
+                return path.join(self.parent_dir, "source", self.record_id + ".warc.gz")
+            case CCRecordStage.STAGED | CCRecordStage.PREPROCESSING:
+                return path.join(self.parent_dir, "staging", self.record_id + ".warc")
+            case CCRecordStage.PREPROCESSED | CCRecordStage.FILTERING:
+                return path.join(
+                    self.parent_dir, "local/prepared", self.record_id + ".jsonl"
+                )
+            case CCRecordStage.FILTERED | CCRecordStage.DEDUPLICATING:
+                return path.join(
+                    self.parent_dir, "local/filtered", self.record_id + ".jsonl"
+                )
+            case CCRecordStage.DEDUPLICATED:
+                return path.join(
+                    self.parent_dir, "local/deduplicated", self.record_id + ".jsonl"
+                )
+            case CCRecordStage.FINAL:
+                return path.join(
+                    self.parent_dir, "local/final", self.record_id + ".jsonl"
+                )
+            case CCRecordStage.ERROR:
+                return self._match_stage(self.stage_history[-1])
+
+    def get_dir(self, stage: CCRecordStage | None = None) -> str | None:
+        if not stage:
+            stage = self.stage
+        return self._rem_ext(self._match_stage(stage))
+
+
+class ArchiveHandler(Protocol):
+    def get(snapshot: str, segment: str):
+        ...
+
+    def __call__(self, stream, filehandler, snapshot_date, segment):
         ...
 
 
