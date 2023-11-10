@@ -32,20 +32,6 @@ def process_segment_url(url: str) -> CCRecord:
     )
 
 
-def create_local_dirs(
-    record: CCRecord,
-    CC_path: str = "CC/",
-    local_stages: list[str] = ["prepared", "filtered", "deduplicated", "final"],
-):
-    stages = ["staging", "source"] + [
-        path.join("local", stage) for stage in local_stages
-    ]
-    prefix_without_num = record["record_id_prefix"].split(os.path.sep)[0:-1]
-    dirs = [path.join(CC_path, ext, *prefix_without_num) for ext in stages]
-    for d in dirs:
-        os.makedirs(d, exist_ok=True)
-
-
 class HTTPArchiveIO(ArchiveIO):
     def __init__(
         self,

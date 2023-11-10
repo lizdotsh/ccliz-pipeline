@@ -1,5 +1,5 @@
 from dataclasses import dataclass, field
-from os import path
+from os import makedirs, path
 from typing import Optional
 
 from .types import CCRecordStage, CCRecordURL, LocalConfig
@@ -75,3 +75,17 @@ class CCRecord:
         file_num = {self.file_num}
         raw = {self.raw}
         """
+
+
+def create_local_dirs(
+    record: CCRecord,
+    CC_path: str = "CC/",
+    local_stages: list[str] = ["prepared", "filtered", "deduplicated", "final"],
+):
+    stages = ["staging", "source"] + [
+        path.join("local", stage) for stage in local_stages
+    ]
+    prefix_without_num = record.record_id.split(path.sep)[0:-1]
+    dirs = [path.join(CC_path, ext, *prefix_without_num) for ext in stages]
+    for d in dirs:
+        makedirs(d, exist_ok=True)
