@@ -1,14 +1,17 @@
 import gzip
+import logging as log
 import os
 import re
 from os import path
 from shutil import copyfileobj
-import logging as log
+from typing import Literal
+
 import requests
 import tqdm
-from typing import Literal
-from .types import ArchiveIO, CCRecord, CCRecordStage, 
-from .utils import check_file, check_and_makedirs
+
+from .pipeline import CCRecord
+from .types import ArchiveIO, CCRecordStage
+from .utils import check_and_makedirs, check_file
 
 process_segment_url_re = re.compile(
     r"crawl-data\/CC-MAIN-(\d{4}-\d{2})\/segments\/(\d+\.\d+)\/warc\/CC-MAIN-\d{14}-\d{14}-(\d{5})\.warc\.gz"
@@ -120,7 +123,9 @@ class LocalArchiveIO(ArchiveIO):
             os.remove(source)
 
 
-def _copy_file_gzip(source, dest, delete: bool = False, overwrite: Literal['always', 'never'] = 'never'):
+def _copy_file_gzip(
+    source, dest, delete: bool = False, overwrite: Literal["always", "never"] = "never"
+):
     source = check_file(source, overwrite)
     dest = check_and_makedirs(dest)
     with gzip.open(source, "rb") as f_in:
@@ -130,14 +135,21 @@ def _copy_file_gzip(source, dest, delete: bool = False, overwrite: Literal['alwa
         os.remove(source)
     return dest
 
-def stage_record(record: CCRecord, overwrite: Literal['always', 'never'] = 'never', delete = False):
+
+def stage_record(
+    record: CCRecord, overwrite: Literal["always", "never"] = "never", delete=False
+):
     if record.stage != CCRecordStage.SOURCE:
-        raise ValueError(f"Record {record.record_id} is not ready to be staged/isn't sourced")
-    try: 
+        raise ValueError(
+            f"Record {record.record_id} is not ready to be staged/isn't sourced"
+        )
+    try:
         log.info(f"Staging record {record.record_id}")
         source_path = record.get_path(record, CCRecordStage.SOURCE)
         staged_path = record.get_path(record, CCRecordStage.STAGED)
-        dest = _copy_file_gzip(source_path, staged_path, delete=delete, overwrite=overwrite)
+        dest = _copy_file_gzip(
+            source_path, staged_path, delete=delete, overwrite=overwrite
+        )
     except Exception as e:
         log.error(f"Error staging record {record.record_id}")
         record.update_stage(CCRecordStage.ERROR)
@@ -145,4 +157,3 @@ def stage_record(record: CCRecord, overwrite: Literal['always', 'never'] = 'neve
     else:
         record.update_stage(CCRecordStage.STAGED)
         return dest
-    

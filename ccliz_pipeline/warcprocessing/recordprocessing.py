@@ -9,8 +9,9 @@ from fastwarc.stream_io import FileStream, GZipStream
 from fastwarc.warc import ArchiveIterator, WarcRecordType
 from tqdm import tqdm
 
+from .pipeline import CCRecord
 from .preprocessing import preprocess_raw_bytes, preprocessing_rules
-from .types import CCRecord, CCRecordStage, TextDocument
+from .types import CCRecordStage, TextDocument
 from .utils import check_and_makedirs, check_file, make_warc_header
 
 encoder = msgspec.json.Encoder()

@@ -7,7 +7,20 @@ from uuid import UUID
 import trafilatura as tf
 from fastwarc.warc import WarcHeaderMap
 
-from .types import CCRecord, CCRecordStage, CCRecordURL, TextDocument, WARCHeader
+from .types import CCRecordStage, CCRecordURL, TextDocument, WARCHeader
+
+stage_converter = {
+    CCRecordStage.VOID: ("", ""),
+    CCRecordStage.SOURCE: ("source", ".warc.gz"),
+    CCRecordStage.STAGED: ("staging", ".warc"),
+    CCRecordStage.PREPROCESSING: ("staging", ".warc"),
+    CCRecordStage.PREPROCESSED: ("local/prepared", ".jsonl"),
+    CCRecordStage.FILTERING: ("local/prepared", ".jsonl"),
+    CCRecordStage.FILTERED: ("local/filtered", ".jsonl"),
+    CCRecordStage.DEDUPLICATING: ("local/filtered", ".jsonl"),
+    CCRecordStage.DEDUPLICATED: ("local/deduplicated", ".jsonl"),
+    CCRecordStage.FINAL: ("local/final", ".jsonl"),
+}
 
 
 def process_html(str: str):
