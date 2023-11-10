@@ -24,7 +24,7 @@ class CCRecord:
         config: LocalConfig = LocalConfig(
             cc_path="CC",
             # Downloader=None,
-            URL_Appendix="test_nov10",
+            URL_Appendix="default",
             stage_converter=stage_converter,
         ),
         **kwargs,
@@ -47,7 +47,7 @@ class CCRecord:
         if not isinstance(stage, CCRecordStage):
             raise ValueError("stage must be of type CCRecordStage")
         if stage == CCRecordStage.ERROR:
-            return self._match_stage(self.stage_history[-1])
+            return self.get_path(self.stage_history[-1])
         file_path = path.join(
             self.config["cc_path"],
             self.config["stage_converter"][stage][0],
@@ -63,3 +63,15 @@ class CCRecord:
     def update_stage(self, stage: CCRecordStage):
         self.stage_history.append(self.stage)
         self.stage = stage
+
+    def __repr__(self):
+        return f"""
+    CCRecord:
+        record_id = {self.record_id}
+        stage = {self.stage}
+        stage_history = {self.stage_history}
+        snapshot = {self.snapshot}
+        segment = {self.segment}
+        file_num = {self.file_num}
+        raw = {self.raw}
+        """

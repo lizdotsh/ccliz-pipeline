@@ -78,7 +78,7 @@ def check_and_makedirs(path_with_extension: str) -> str:
 
 
 process_segment_url_re = re.compile(
-    r"crawl-data\/CC-MAIN-(\d{4}-\d{2})\/segments\/(\d+\.\d+)\/warc\/CC-MAIN-\d{14}-\d{14}-(\d{5f})\.warc\.gz"
+    r"crawl-data\/CC-MAIN-(\d{4}-\d{2})\/segments\/(\d+\.\d+)\/warc\/CC-MAIN-\d{14}-\d{14}-(\d{5})\.warc\.gz"
 )
 
 
